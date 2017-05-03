@@ -1,4 +1,4 @@
-<canvas id="ctx" width="500" height="500" style="border:1px solid #000000;"></canvas>
+<canvas id="ctx" width="1280" height="720" style="border:1px solid #000000;"></canvas>
  
 <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
 <script>
@@ -8,9 +8,12 @@
     var socket = io();
        
     socket.on('newPositions',function(data){
-        ctx.clearRect(0,0,500,500);
+        ctx.clearRect(0,0,1280,720);
         for(var i = 0 ; i < data.length; i++)
-            ctx.fillText(data[i].number,data[i].x,data[i].y);      
+			ctx.fillStyle = data[i].color;
+			ctx.beginPath();
+			ctx.arc(data[i].x,data[i].y,24,0,2*Math.PI);
+			ctx.fill();    
     });
  
     document.onkeydown = function(event){

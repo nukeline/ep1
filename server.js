@@ -1,5 +1,3 @@
-
-
 var express = require('express');
 var app = express();
 var serv = require('http').Server(app);
@@ -18,15 +16,15 @@ var PLAYER_LIST = {};
  
 var Player = function(id){
     var self = {
-        x:250,
-        y:250,
+        x:640,
+        y:360,
         id:id,
-        number:"" + Math.floor(10 * Math.random()),
+        color:'#'+Math.floor(Math.random()*16777215).toString(16),
         pressingRight:false,
         pressingLeft:false,
         pressingUp:false,
         pressingDown:false,
-        maxSpd:10,
+        maxSpd:5,
     }
     self.updatePosition = function(){
         if(self.pressingRight)
@@ -76,7 +74,7 @@ setInterval(function(){
         pack.push({
             x:player.x,
             y:player.y,
-            number:player.number
+            color:player.color,
         });    
     }
     for(var i in SOCKET_LIST){
@@ -87,4 +85,4 @@ setInterval(function(){
    
    
    
-},1000/25);
+},1000/60);

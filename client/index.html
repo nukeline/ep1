@@ -1,19 +1,47 @@
-<canvas id="ctx" width="1280" height="720" style="border:1px solid #000000;"></canvas>
+<canvas id="ctx" width="1280" height="720" style="border:1px solid #000000; position: absolute; left: 10; top: 10"></canvas>
  
 <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
 <script>
     var ctx = document.getElementById("ctx").getContext("2d");
     ctx.font = '30px Arial';
-   
-    var socket = io();
-       
+	
+	document.getElementById("ctx").onmousemove = getMousePosition;
+	document.getElementById("ctx").onmousedown = mouseDown;
+	document.getElementById("ctx").onmouseup = mouseUp;
+	var socket = io();
+	
+	function getMousePosition(event) {
+		mx = event.pageX-10;
+		my = event.pageY-10;
+		socket.emit('mouseMove',{inputId:'mouse',state:[mx,my]});
+	}
+	function mouseDown(event) {
+		socket.emit('keyPress',{inputId:'mouse',state:true});
+	}
+	function mouseUp(event) {
+		socket.emit('keyPress',{inputId:'mouse',state:false});
+	}
+    
     socket.on('newPositions',function(data){
         ctx.clearRect(0,0,1280,720);
-        for(var i = 0 ; i < data.length; i++)
+        for(var i = 0 ; i < data.length; i++){
 			ctx.fillStyle = data[i].color;
 			ctx.beginPath();
 			ctx.arc(data[i].x,data[i].y,24,0,2*Math.PI);
-			ctx.fill();    
+			ctx.fill();
+			ctx.fillStyle = "black";
+			ctx.beginPath();
+			ctx.arc(data[i].mouseX,data[i].mouseY,5,0,2*Math.PI);
+			ctx.fill();
+			
+
+			for(var j = 0 ; j < data[i].bullets.length; j++){
+				//ctx.fillStyle = "black";
+				ctx.beginPath();
+				ctx.arc(data[i].bullets[j].x,data[i].bullets[j].y,5,0,2*Math.PI);
+				ctx.fill();
+			}
+		}    
     });
  
     document.onkeydown = function(event){

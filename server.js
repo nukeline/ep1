@@ -24,7 +24,13 @@ var Player = function(id){
         pressingLeft:false,
         pressingUp:false,
         pressingDown:false,
+		pressingMouse:false,
+		mouseX:640,
+		mouseY:360,
         maxSpd:5,
+		bullets:[],
+		shootcd: false,
+		hp:100,
     }
     self.updatePosition = function(){
         if(self.pressingRight)
@@ -34,7 +40,38 @@ var Player = function(id){
         if(self.pressingUp)
             self.y -= self.maxSpd;
         if(self.pressingDown)
-            self.y += self.maxSpd;
+            self.y += self.maxSpd;			
+    }
+	self.shoot = function(){
+		if(self.pressingMouse && !self.shootcd) {
+			var bullet = Bullet(self.x, self.y, Math.atan2(self.mouseY-self.y,self.mouseX-self.x), 10, 10, self.id);
+			self.bullets.push(bullet);
+			self.shootcd = true;
+		}
+		if(!self.pressingMouse) {
+			self.shootcd = false;
+		}
+	}
+	self.updateBullets = function() {
+		for (i in self.bullets) {
+			self.bullets[i].updatePosition();
+		}
+	}
+    return self;
+}
+
+var Bullet = function(x, y, d, s, dmg,id){
+    var self = {
+        x:x,
+        y:y,
+		dir:d,
+        maxSpd:s,
+		dmg:dmg,
+		id:id,
+    }
+    self.updatePosition = function(){
+		self.x += self.maxSpd * Math.cos(self.dir);
+		self.y += self.maxSpd * Math.sin(self.dir);
     }
     return self;
 }
@@ -61,28 +98,36 @@ io.sockets.on('connection', function(socket){
             player.pressingUp = data.state;
         else if(data.inputId === 'down')
             player.pressingDown = data.state;
+		else if(data.inputId === 'mouse')
+            player.pressingMouse = data.state;
     });
-   
-   
+	socket.on('mouseMove',function(data){
+		if(data.inputId === 'mouse') {
+			player.mouseX = data.state[0];
+			player.mouseY = data.state[1];
+		}
+    });
 });
- 
+
 setInterval(function(){
     var pack = [];
     for(var i in PLAYER_LIST){
         var player = PLAYER_LIST[i];
         player.updatePosition();
+		player.shoot();
+		player.updateBullets();
         pack.push({
             x:player.x,
             y:player.y,
             color:player.color,
-        });    
+			mouseX:player.mouseX,
+			mouseY:player.mouseY,
+			bullets:player.bullets,
+			hp:players.hp,
+        }); 
     }
     for(var i in SOCKET_LIST){
         var socket = SOCKET_LIST[i];
         socket.emit('newPositions',pack);
     }
-   
-   
-   
-   
 },1000/60);

@@ -30,7 +30,6 @@ var Player = function(id){
         maxSpd:5,
 		bullets:[],
 		shootcd: false,
-		hp:100,
     }
     self.updatePosition = function(){
         if(self.pressingRight)
@@ -123,7 +122,6 @@ setInterval(function(){
 			mouseX:player.mouseX,
 			mouseY:player.mouseY,
 			bullets:player.bullets,
-			hp:players.hp,
         }); 
     }
     for(var i in SOCKET_LIST){

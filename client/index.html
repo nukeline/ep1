@@ -34,9 +34,14 @@
 			ctx.arc(data[i].mouseX,data[i].mouseY,5,0,2*Math.PI);
 			ctx.fill();
 			
-
+			ctx.fillStyle = "red";
+			ctx.fillRect(data[i].x-35,data[i].y-45,70,8);
+			ctx.fillStyle = "green";
+			ctx.fillRect(data[i].x-35,data[i].y-45,data[i].hp/data[i].maxHp*70,8);
+			
+			
 			for(var j = 0 ; j < data[i].bullets.length; j++){
-				//ctx.fillStyle = "black";
+				ctx.fillStyle = "black";
 				ctx.beginPath();
 				ctx.arc(data[i].bullets[j].x,data[i].bullets[j].y,5,0,2*Math.PI);
 				ctx.fill();

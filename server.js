@@ -28,10 +28,13 @@ var Player = function(id){
 		pressingMouse:false,
 		mouseX:640,
 		mouseY:360,
-        maxSpd:10,
+        maxSpd:5,
 		maxHp:100,
 		hp:100,
+		maxCharge:120,
+		charge:0,
 		shootcd: false,
+		shootin: false,
 		bullets: [],
     }
     self.updatePosition = function(){
@@ -45,12 +48,20 @@ var Player = function(id){
             self.y += self.maxSpd;	
     }
 	self.shoot = function(){
-		if(self.pressingMouse && !self.shootcd) {
+		if (self.pressingMouse && !self.shootin) {
+			self.shootin = true;
+		} else if (self.shootin && self.charge < self.maxCharge) {
+			self.charge++;
+		}
+		if(!self.pressingMouse && self.shootin) {
 			console.log(self.bullets.length);
 			ldir = Math.atan2(self.mouseY-self.y,self.mouseX-self.x);
-			var bullet = Bullet(self.x+(self.r+10)*Math.cos(ldir), self.y+(self.r+10)*Math.sin(ldir), ldir, 10, 10, self.id);
+			var bullet = Bullet(self.x+(self.r+10)*Math.cos(ldir), self.y+(self.r+10)*Math.sin(ldir), ldir, 10, 100*self.charge/120, self.id);
+			console.log(bullet.dmg);
 			self.bullets.push(bullet);
 			self.shootcd = true;
+			self.shootin = false;
+			self.charge = 0;
 		}
 		if(!self.pressingMouse) {
 			self.shootcd = false;
@@ -68,7 +79,6 @@ var Player = function(id){
 						continue;
 					} else if (getDistance(self.bullets[i].x,PLAYER_LIST[j].x,self.bullets[i].y,PLAYER_LIST[j].y) < self.bullets[i].r+PLAYER_LIST[j].r) {
 						PLAYER_LIST[j].hp -= self.bullets[i].dmg;
-						console.log(PLAYER_LIST[j].hp);
 						self.bullets.splice(i,1);
 						broken = true;
 						break;
@@ -84,7 +94,7 @@ var Player = function(id){
     return self;
 }
 
-var Bullet = function(x, y, d, s, dmg,id){
+var Bullet = function(x, y, d, s, dmg, id){
     var self = {
         x:x,
         y:y,
@@ -159,6 +169,8 @@ setInterval(function(){
 			bullets:player.bullets,
 			maxHp:player.maxHp,
 			hp:player.hp,
+			maxCharge:player.maxCharge,
+			charge:player.charge,
         });
     }
     for(var i in SOCKET_LIST){

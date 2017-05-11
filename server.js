@@ -20,6 +20,7 @@ var Player = function(id){
         y:360,
         id:id,
         color:'#'+Math.floor(Math.random()*16777215).toString(16),
+		r:24,
         pressingRight:false,
         pressingLeft:false,
         pressingUp:false,
@@ -27,23 +28,27 @@ var Player = function(id){
 		pressingMouse:false,
 		mouseX:640,
 		mouseY:360,
-        maxSpd:5,
-		bullets:[],
+        maxSpd:10,
+		maxHp:100,
+		hp:100,
 		shootcd: false,
+		bullets: [],
     }
     self.updatePosition = function(){
-        if(self.pressingRight)
+        if(self.pressingRight && self.x < 1280-self.r)
             self.x += self.maxSpd;
-        if(self.pressingLeft)
+        if(self.pressingLeft && self.x > 0+self.r)
             self.x -= self.maxSpd;
-        if(self.pressingUp)
+        if(self.pressingUp && self.y > 0+self.r)
             self.y -= self.maxSpd;
-        if(self.pressingDown)
-            self.y += self.maxSpd;			
+        if(self.pressingDown && self.y < 720-self.r)
+            self.y += self.maxSpd;	
     }
 	self.shoot = function(){
 		if(self.pressingMouse && !self.shootcd) {
-			var bullet = Bullet(self.x, self.y, Math.atan2(self.mouseY-self.y,self.mouseX-self.x), 10, 10, self.id);
+			console.log(self.bullets.length);
+			ldir = Math.atan2(self.mouseY-self.y,self.mouseX-self.x);
+			var bullet = Bullet(self.x+(self.r+10)*Math.cos(ldir), self.y+(self.r+10)*Math.sin(ldir), ldir, 10, 10, self.id);
 			self.bullets.push(bullet);
 			self.shootcd = true;
 		}
@@ -52,8 +57,28 @@ var Player = function(id){
 		}
 	}
 	self.updateBullets = function() {
-		for (i in self.bullets) {
-			self.bullets[i].updatePosition();
+		for (var i in self.bullets) {
+			if (self.bullets[i].x > 1280 || self.bullets[i].x < 0 || self.bullets[i].y > 720 || self.bullets[i].y < 0) {
+				self.bullets.splice(i,1);
+				continue;
+			} else {
+				broken = false;
+				for (j in PLAYER_LIST) {
+					if (self.id == PLAYER_LIST[j].id) {
+						continue;
+					} else if (getDistance(self.bullets[i].x,PLAYER_LIST[j].x,self.bullets[i].y,PLAYER_LIST[j].y) < self.bullets[i].r+PLAYER_LIST[j].r) {
+						PLAYER_LIST[j].hp -= self.bullets[i].dmg;
+						console.log(PLAYER_LIST[j].hp);
+						self.bullets.splice(i,1);
+						broken = true;
+						break;
+					}
+				}
+				if (!broken) {
+					self.bullets[i].x += self.bullets[i].maxSpd*Math.cos(self.bullets[i].dir);
+					self.bullets[i].y += self.bullets[i].maxSpd*Math.sin(self.bullets[i].dir);
+				}
+			}
 		}
 	}
     return self;
@@ -64,6 +89,7 @@ var Bullet = function(x, y, d, s, dmg,id){
         x:x,
         y:y,
 		dir:d,
+		r:5,
         maxSpd:s,
 		dmg:dmg,
 		id:id,
@@ -108,21 +134,32 @@ io.sockets.on('connection', function(socket){
     });
 });
 
-setInterval(function(){
+function getDistance(x1, x2, y1, y2) {
+	return Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+}
+
+setInterval(function(){	
     var pack = [];
     for(var i in PLAYER_LIST){
         var player = PLAYER_LIST[i];
+		if (PLAYER_LIST[i].hp <= 0) {
+			delete PLAYER_LIST[i];
+			continue;
+		}
+		player.updateBullets();
         player.updatePosition();
 		player.shoot();
-		player.updateBullets();
         pack.push({
             x:player.x,
             y:player.y,
             color:player.color,
+			r:player.r,
 			mouseX:player.mouseX,
 			mouseY:player.mouseY,
 			bullets:player.bullets,
-        }); 
+			maxHp:player.maxHp,
+			hp:player.hp,
+        });
     }
     for(var i in SOCKET_LIST){
         var socket = SOCKET_LIST[i];

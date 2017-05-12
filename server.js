@@ -44,12 +44,6 @@ var Player = function(id){
 		bullets: [],
     }
     self.updatePosition = function(){
-		if (self.mana < self.maxMana) {
-			self.mana += 0.1;
-			if (self.shield && self.mana >= 1) {
-				self.mana--;
-			}
-		}
 		
         if(self.pressingRight && self.x < 1280-self.r)
             self.x += self.maxSpd;
@@ -78,7 +72,12 @@ var Player = function(id){
 		}
 	}
 	self.updateshield = function() {
-		if (self.mana >= 1) {
+		self.shield = self.pressingMouseRight;
+		if (self.mana < self.maxMana) {
+			self.mana += 0.1;
+		}
+		if (self.shield && self.mana >= 1) {
+			self.mana--;
 			self.shield = self.pressingMouseRight;
 		} else {
 			self.shield = false;
@@ -102,7 +101,13 @@ var Player = function(id){
 						if (!PLAYER_LIST[j].shield) {																										//shield
 							PLAYER_LIST[j].hp -= self.bullets[i].dmg;
 							self.bullets.splice(i,1);
-							self.mana += 6;
+							if (self.mana < self.maxMana) {
+								self.mana += 3;
+							}
+							if (self.mana > self.maxMana) {
+								self.mana = self.maxMana;
+							}
+							
 							broken = true;
 							break;
 						} else {

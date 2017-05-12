@@ -4,12 +4,14 @@
 <script>
     var ctx = document.getElementById("ctx").getContext("2d");
     ctx.font = '30px Arial';
-	
+	/*
 	document.getElementById("ctx").onmousemove = getMousePosition;
 	document.getElementById("ctx").onmousedown = mouseDown;
 	document.getElementById("ctx").onmouseup = mouseUp;
+	*/
 	var socket = io();
-	
+
+	/*
 	function getMousePosition(event) {
 		mx = event.pageX-10;
 		my = event.pageY-10;
@@ -21,13 +23,14 @@
 	function mouseUp(event) {
 		socket.emit('keyPress',{inputId:'mouse',state:false});
 	}
+	*/
     
     socket.on('newPositions',function(data){
         //ctx.clearRect(0,0,1280,720);
 		ctx.fillStyle = "#333333";
 		ctx.fillRect(0,0,1280,720);
         for(var i = 0 ; i < data.length; i++){
-			ctx.fillStyle = data[i].color;
+			ctx.fillStyle = data[i].color;														//draw char
 			ctx.beginPath();
 			ctx.arc(data[i].x,data[i].y,24,0,2*Math.PI);
 			ctx.fill();
@@ -36,20 +39,35 @@
 			ctx.arc(data[i].mouseX,data[i].mouseY,5,0,2*Math.PI);
 			ctx.fill();
 			
-			ctx.fillStyle = "red";
+			
+			
+			ctx.fillStyle = "red";																//draw health bars
 			ctx.fillRect(data[i].x-35,data[i].y-45,70,8);
 			ctx.fillStyle = "green";
 			ctx.fillRect(data[i].x-35,data[i].y-45,data[i].hp/data[i].maxHp*70,8);
+			ctx.fillStyle = "black";																//draw health bars
+			ctx.fillRect(data[i].x-35,data[i].y-35,70,8);
+			ctx.fillStyle = "blue";
+			ctx.fillRect(data[i].x-35,data[i].y-35,data[i].mana/data[i].maxMana*70,8);
 			
-			ctx.strokeStyle = "white";
-			ctx.lineWidth = 5;
+			ctx.strokeStyle = "white";															//draw charge
+			ctx.lineWidth = 6;
 			ctx.beginPath();
-			ctx.arc(data[i].x,data[i].y,24,0,(2*Math.PI*data[i].charge/data[i].maxCharge));
-			//(2*Math.PI*data[i]charge/data[i].maxCharge)
+			ctx.arc(data[i].x,data[i].y,24-3,0,(2*Math.PI*data[i].charge/data[i].maxCharge));
 			ctx.stroke();
 			
+			if (data[i].shield) {
+				ctx.globalAlpha = 0.5;
+				ctx.strokeStyle = "blue";															//draw shield
+				ctx.lineWidth = 5;
+				ctx.beginPath();
+				ctx.arc(data[i].x,data[i].y,24+5,0,(2*Math.PI));
+				ctx.stroke();
+				ctx.globalAlpha = 1;
+			}
 			
-			for(var j = 0 ; j < data[i].bullets.length; j++){
+			
+			for(var j = 0 ; j < data[i].bullets.length; j++){									//draw bullets
 				ctx.fillStyle = "black";
 				ctx.beginPath();
 				ctx.arc(data[i].bullets[j].x,data[i].bullets[j].y,5,0,2*Math.PI);
@@ -57,7 +75,41 @@
 			}
 		}    
     });
- 
+	
+	
+	document.oncontextmenu = function(event) {
+		event.preventDefault();
+	}
+	document.onmousemove = function(event) {
+		mx = event.pageX-10;
+		my = event.pageY-10;
+		socket.emit('mouseMove',{inputId:'mouse',state:[mx,my]});
+	}
+	document.onmousedown = function(event) {
+		switch (event.button) {
+			case 0: 
+				socket.emit('keyPress',{inputId:'mouseleft',state:true});
+				break;
+			case 2:
+				socket.emit('keyPress',{inputId:'mouseright',state:true});
+				break;
+			default:
+				alert(event.button);
+		}
+	}
+	document.onmouseup = function(event) {
+		switch (event.button) {
+			case 0: 
+				socket.emit('keyPress',{inputId:'mouseleft',state:false});
+				break;
+			case 2:
+				socket.emit('keyPress',{inputId:'mouseright',state:false});
+				break;
+			default:
+				alert(event.button);
+		}
+	}
+
     document.onkeydown = function(event){
         if(event.keyCode === 68)    //d
             socket.emit('keyPress',{inputId:'right',state:true});

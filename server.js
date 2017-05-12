@@ -21,23 +21,36 @@ var Player = function(id){
         id:id,
         color:'#'+Math.floor(Math.random()*16777215).toString(16),
 		r:24,
+		rs:48,
+		rns:24,
         pressingRight:false,
         pressingLeft:false,
         pressingUp:false,
         pressingDown:false,
-		pressingMouse:false,
+		pressingMouseLeft:false,
+		pressingMouseRight:false,
 		mouseX:640,
 		mouseY:360,
         maxSpd:5,
 		maxHp:100,
 		hp:100,
-		maxCharge:120,
+		maxMana:120,
+		mana:60,
+		maxCharge:60,
 		charge:0,
 		shootcd: false,
 		shootin: false,
+		sheild: false,
 		bullets: [],
     }
     self.updatePosition = function(){
+		if (self.mana < self.maxMana) {
+			self.mana += 0.1;
+			if (self.shield && self.mana >= 1) {
+				self.mana--;
+			}
+		}
+		
         if(self.pressingRight && self.x < 1280-self.r)
             self.x += self.maxSpd;
         if(self.pressingLeft && self.x > 0+self.r)
@@ -48,28 +61,36 @@ var Player = function(id){
             self.y += self.maxSpd;	
     }
 	self.shoot = function(){
-		if (self.pressingMouse && !self.shootin) {
+		if (self.pressingMouseLeft && !self.shootin) {																							//initiate shooting
 			self.shootin = true;
-		} else if (self.shootin && self.charge < self.maxCharge) {
+		} else if (self.shootin && self.charge < self.maxCharge) {																				//already shooting and not full
 			self.charge++;
 		}
-		if(!self.pressingMouse && self.shootin) {
+		if(!self.pressingMouseLeft && self.shootin) {																							//not shooting and have charge
 			console.log(self.bullets.length);
 			ldir = Math.atan2(self.mouseY-self.y,self.mouseX-self.x);
-			var bullet = Bullet(self.x+(self.r+10)*Math.cos(ldir), self.y+(self.r+10)*Math.sin(ldir), ldir, 10, 100*self.charge/120, self.id);
+			var bullet = Bullet(self.x+(self.r+10)*Math.cos(ldir), self.y+(self.r+10)*Math.sin(ldir), ldir, 10+10*self.charge/60, 50*self.charge/60, self.id);
 			console.log(bullet.dmg);
 			self.bullets.push(bullet);
 			self.shootcd = true;
 			self.shootin = false;
 			self.charge = 0;
 		}
-		if(!self.pressingMouse) {
-			self.shootcd = false;
+	}
+	self.updateshield = function() {
+		if (self.mana >= 1) {
+			self.shield = self.pressingMouseRight;
+		} else {
+			self.shield = false;
 		}
+
+		//console.log(self.pressingMouseRight)
+		//self.shield = true;
+		//if (self.shield) {self.r = self.rs;} else {self.r = self.rns;}
 	}
 	self.updateBullets = function() {
 		for (var i in self.bullets) {
-			if (self.bullets[i].x > 1280 || self.bullets[i].x < 0 || self.bullets[i].y > 720 || self.bullets[i].y < 0) {
+			if (self.bullets[i].x > 1280 || self.bullets[i].x < 0 || self.bullets[i].y > 720 || self.bullets[i].y < 0) {						//bullets out of bound
 				self.bullets.splice(i,1);
 				continue;
 			} else {
@@ -77,11 +98,17 @@ var Player = function(id){
 				for (j in PLAYER_LIST) {
 					if (self.id == PLAYER_LIST[j].id) {
 						continue;
-					} else if (getDistance(self.bullets[i].x,PLAYER_LIST[j].x,self.bullets[i].y,PLAYER_LIST[j].y) < self.bullets[i].r+PLAYER_LIST[j].r) {
-						PLAYER_LIST[j].hp -= self.bullets[i].dmg;
-						self.bullets.splice(i,1);
-						broken = true;
-						break;
+					} else if (getDistance(self.bullets[i].x,PLAYER_LIST[j].x,self.bullets[i].y,PLAYER_LIST[j].y) < self.bullets[i].r+PLAYER_LIST[j].r) {	//collision
+						if (!PLAYER_LIST[j].shield) {																										//shield
+							PLAYER_LIST[j].hp -= self.bullets[i].dmg;
+							self.bullets.splice(i,1);
+							self.mana += 6;
+							broken = true;
+							break;
+						} else {
+							self.bullets[i].dir += Math.PI;
+							self.bullets[i].id = PLAYER_LIST[j].id;
+						}
 					}
 				}
 				if (!broken) {
@@ -133,8 +160,10 @@ io.sockets.on('connection', function(socket){
             player.pressingUp = data.state;
         else if(data.inputId === 'down')
             player.pressingDown = data.state;
-		else if(data.inputId === 'mouse')
-            player.pressingMouse = data.state;
+		else if(data.inputId === 'mouseleft')
+            player.pressingMouseLeft = data.state;
+		else if(data.inputId === 'mouseright')
+            player.pressingMouseRight = data.state;
     });
 	socket.on('mouseMove',function(data){
 		if(data.inputId === 'mouse') {
@@ -159,6 +188,7 @@ setInterval(function(){
 		player.updateBullets();
         player.updatePosition();
 		player.shoot();
+		player.updateshield();
         pack.push({
             x:player.x,
             y:player.y,
@@ -169,8 +199,11 @@ setInterval(function(){
 			bullets:player.bullets,
 			maxHp:player.maxHp,
 			hp:player.hp,
+			maxMana:player.maxMana,
+			mana:player.mana,
 			maxCharge:player.maxCharge,
 			charge:player.charge,
+			shield:player.shield,
         });
     }
     for(var i in SOCKET_LIST){

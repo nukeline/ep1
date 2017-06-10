@@ -1,100 +1,167 @@
-<canvas id="ctx" width="1280" height="720" style="border:1px solid #000000; position: absolute; left: 10; top: 10"></canvas>
- 
+<canvas id="ctx" width="900" height="900" style="border:1px solid #000000; position: absolute; left: 10; top: 10; z-index: 1;"></canvas>
+<canvas id="ctxp" width="100" height="100" style="position: absolute; left: 10; top: 10; z-index: 3;"></canvas>
+<canvas id="ctxsc" width="300" height="900" style="border:1px solid #000000; position: absolute; left: 910; top: 10; z-index: 1;"></canvas>
 <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
 <script>
     var ctx = document.getElementById("ctx").getContext("2d");
-    ctx.font = '30px Arial';
-	/*
-	document.getElementById("ctx").onmousemove = getMousePosition;
-	document.getElementById("ctx").onmousedown = mouseDown;
-	document.getElementById("ctx").onmouseup = mouseUp;
-	*/
+	var ctxp = document.getElementById("ctxp").getContext("2d");
+	var ctxsc = document.getElementById("ctxsc").getContext("2d");
+	
+    ctx.font = '15px Arial';
+	ctxsc.font = '16px Arial';
+	
 	var socket = io();
-
-	/*
-	function getMousePosition(event) {
-		mx = event.pageX-10;
-		my = event.pageY-10;
-		socket.emit('mouseMove',{inputId:'mouse',state:[mx,my]});
-	}
-	function mouseDown(event) {
-		socket.emit('keyPress',{inputId:'mouse',state:true});
-	}
-	function mouseUp(event) {
-		socket.emit('keyPress',{inputId:'mouse',state:false});
-	}
-	*/
     
+	var img_backg = new Image();
+	img_backg.src = 'http://i.imgur.com/O7X1ekJ.png';	
+	var img_eball = new Image();
+	img_eball.src = 'http://i.imgur.com/h5NY85F.png';
+	var img_fball = new Image();
+	img_fball.src = 'http://i.imgur.com/HsNIHhA.png';
+	var img_fexpl = new Image();
+	img_fexpl.src = 'http://i.imgur.com/SFAs5iQ.png';
+	
+	
+	
+	pc = 0;
+	setInterval(function(){
+		pc += 10;
+	},10);
+	
+	socket.on('retping',function(data) {
+		ctxp.clearRect(0,0,100,100);
+		//alert(pc-data);
+		ctxp.fillText("ping: " + (pc-data) + " ms",10,10);
+	});
+	
+	var scr = {
+		x: 50,
+		y: 0,
+	}
+	
+	var cm = {
+		x: 450,
+		y: 450,
+	}
+	
+	anic = 0;
+	animation = [];
+	
     socket.on('newPositions',function(data){
-        //ctx.clearRect(0,0,1280,720);
-		ctx.fillStyle = "#333333";
-		ctx.fillRect(0,0,1280,720);
-        for(var i = 0 ; i < data.length; i++){
+		if ((anic%30) == 0) {
+			socket.emit('onping',{inputId:'pingcheck',state:pc});
+		}
+	
+		ctx.drawImage(img_backg,-scr.x,-scr.y);
+        for(var i = 0; i < data.length; i++){
 			ctx.fillStyle = data[i].color;														//draw char
 			ctx.beginPath();
-			ctx.arc(data[i].x,data[i].y,24,0,2*Math.PI);
+			ctx.arc(data[i].x-scr.x,data[i].y-scr.y,24,0,2*Math.PI);
 			ctx.fill();
 			ctx.fillStyle = "black";
-			ctx.beginPath();
-			ctx.arc(data[i].mouseX,data[i].mouseY,5,0,2*Math.PI);
-			ctx.fill();
+			ctx.fillText(data[i].name,data[i].x-scr.x,data[i].y-scr.y);
 			
+			//alert(typeof data[i].bullets);
 			
-			
-			ctx.fillStyle = "red";																//draw health bars
-			ctx.fillRect(data[i].x-35,data[i].y-45,70,8);
-			ctx.fillStyle = "green";
-			ctx.fillRect(data[i].x-35,data[i].y-45,data[i].hp/data[i].maxHp*70,8);
-			ctx.fillStyle = "black";																//draw health bars
-			ctx.fillRect(data[i].x-35,data[i].y-35,70,8);
-			ctx.fillStyle = "blue";
-			ctx.fillRect(data[i].x-35,data[i].y-35,data[i].mana/data[i].maxMana*70,8);
-			
-			ctx.strokeStyle = "white";															//draw charge
-			ctx.lineWidth = 6;
-			ctx.beginPath();
-			ctx.arc(data[i].x,data[i].y,24-3,0,(2*Math.PI*data[i].charge/data[i].maxCharge));
-			ctx.stroke();
-			
-			if (data[i].shield) {
-				ctx.globalAlpha = 0.5;
-				ctx.strokeStyle = "blue";															//draw shield
-				ctx.lineWidth = 5;
+			for(j in data[i].bullets){
+				switch (data[i].bullets[j].type) {
+					case 'energyball':
+						ctx.drawImage(img_eball,64*(Math.round(anic)%3),0,64,64,data[i].bullets[j].x-scr.x-32,data[i].bullets[j].y-scr.y-32,64,64);
+						break;
+					case 'fireball':
+						if (data[i].bullets[j].exp == 0) {
+							ctx.save();
+							ctx.translate(data[i].bullets[j].x-scr.x,data[i].bullets[j].y-scr.y);
+							ctx.rotate(Math.atan2(-1*Math.cos(data[i].bullets[j].dir), Math.sin(data[i].bullets[j].dir))-Math.PI/2);
+							ctx.drawImage(img_fball,64*(Math.round(anic)%8),0,64,64,-12,-48,96,96);
+							ctx.restore();
+						} else {
+							animation.push({f:25,x:data[i].bullets[j].x,y:data[i].bullets[j].y});
+						}
+						break;
+				}
+				/*
 				ctx.beginPath();
-				ctx.arc(data[i].x,data[i].y,24+5,0,(2*Math.PI));
-				ctx.stroke();
-				ctx.globalAlpha = 1;
-			}
-			
-			
-			for(var j = 0 ; j < data[i].bullets.length; j++){									//draw bullets
-				ctx.fillStyle = "black";
-				ctx.beginPath();
-				ctx.arc(data[i].bullets[j].x,data[i].bullets[j].y,5,0,2*Math.PI);
+				ctx.arc(data[i].bullets[j].x-scr.x,data[i].bullets[j].y-scr.y,5,0,2*Math.PI);
 				ctx.fill();
+				*/
 			}
-		}    
+			ctx.fillStyle = "red";																//draw health bars
+			ctx.fillRect(data[i].x-35-scr.x,data[i].y-45-scr.y,70,8);
+			ctx.fillStyle = "green";
+			ctx.fillRect(data[i].x-35-scr.x,data[i].y-45-scr.y,data[i].hp/data[i].maxHp*70,8);
+			ctx.fillStyle = "black";																//draw health bars
+			ctx.fillRect(data[i].x-35-scr.x,data[i].y-35-scr.y,70,8);
+			ctx.fillStyle = "blue";
+			ctx.fillRect(data[i].x-35-scr.x,data[i].y-35-scr.y,data[i].mana/data[i].maxMana*70,8);
+			
+		}
+		//animation
+		for (i in animation) {
+			ctx.drawImage(img_fexpl,64*(25-animation[i].f),0,64,64,animation[i].x-48-scr.x,animation[i].y-48-scr.y,96,96);
+			if (animation[i].f == 0) {
+				animation.splice(i,1);
+				continue; 
+			} else {
+				animation[i].f--;
+			}
+		}
+		
+		if (cm.x < 90 && scr.x > 0) {
+			scr.x -= 10;
+		} else if (cm.x > 810 && scr.x < 1260) {
+			scr.x += 10;
+		}
+		if (cm.y < 90 && scr.y > 0) {
+			scr.y -= 10;
+		} else if (cm.y > 810 && scr.y < 1260) {
+			scr.y += 10;
+		}
+		anic += 0.5;
     });
 	
+	socket.on('initiate', function(data) {
+		var name = prompt("Please enter your name:" + " id:" + data, "");
+		if (name == null || name == "") {
+			name = data;
+		}
+		emitname({id:data,name:name});
+	});
+	function emitname(obj){
+		socket.emit('name',obj);
+	}
+	names = [];
+	socket.on('namelist',function(data){
+		names = data;
+		ctxsc.clearRect(0,0,300,900);
+		for (var i in names) {
+			ctxsc.fillText(names[i],24,24+24*i)
+		}
+	});
 	
 	document.oncontextmenu = function(event) {
-		event.preventDefault();
+		if (cm.x < 900) {
+			event.preventDefault();
+		}
 	}
 	document.onmousemove = function(event) {
-		mx = event.pageX-10;
-		my = event.pageY-10;
-		socket.emit('mouseMove',{inputId:'mouse',state:[mx,my]});
+		cm.x = event.pageX-10;
+		cm.y = event.pageY-10;
+		socket.emit('mouseMove',{inputId:'mouse',state:[cm.x+scr.x,cm.y+scr.y]});
 	}
 	document.onmousedown = function(event) {
 		switch (event.button) {
 			case 0: 
 				socket.emit('keyPress',{inputId:'mouseleft',state:true});
 				break;
+			case 1:
+				socket.emit('keyPress',{inputId:'pingcheck',state:pc});
+				break;
 			case 2:
 				socket.emit('keyPress',{inputId:'mouseright',state:true});
 				break;
 			default:
-				alert(event.button);
+				//alert(event.button);
 		}
 	}
 	document.onmouseup = function(event) {
@@ -106,30 +173,29 @@
 				socket.emit('keyPress',{inputId:'mouseright',state:false});
 				break;
 			default:
-				alert(event.button);
+				//alert(event.button);
 		}
 	}
 
     document.onkeydown = function(event){
-        if(event.keyCode === 68)    //d
-            socket.emit('keyPress',{inputId:'right',state:true});
-        else if(event.keyCode === 83)   //s
-            socket.emit('keyPress',{inputId:'down',state:true});
-        else if(event.keyCode === 65) //a
-            socket.emit('keyPress',{inputId:'left',state:true});
-        else if(event.keyCode === 87) // w
-            socket.emit('keyPress',{inputId:'up',state:true});
-           
+        if(event.keyCode === 81)      //q
+            socket.emit('keyPress',{inputId:'Q',state:true});
+        else if(event.keyCode === 87) //w
+            socket.emit('keyPress',{inputId:'W',state:true});
+        else if(event.keyCode === 69) //e
+            socket.emit('keyPress',{inputId:'E',state:true});
+        else if(event.keyCode === 82) //r
+            socket.emit('keyPress',{inputId:'R',state:true});
     }
     document.onkeyup = function(event){
-        if(event.keyCode === 68)    //d
-            socket.emit('keyPress',{inputId:'right',state:false});
-        else if(event.keyCode === 83)   //s
-            socket.emit('keyPress',{inputId:'down',state:false});
-        else if(event.keyCode === 65) //a
-            socket.emit('keyPress',{inputId:'left',state:false});
-        else if(event.keyCode === 87) // w
-            socket.emit('keyPress',{inputId:'up',state:false});
+        if(event.keyCode === 81)      //q
+            socket.emit('keyPress',{inputId:'Q',state:false});
+        else if(event.keyCode === 87) //w
+            socket.emit('keyPress',{inputId:'W',state:false});
+        else if(event.keyCode === 69) //e
+            socket.emit('keyPress',{inputId:'E',state:false});
+        else if(event.keyCode === 82) //r
+            socket.emit('keyPress',{inputId:'R',state:false});
     }
    
 </script>

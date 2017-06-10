@@ -16,130 +16,157 @@ var PLAYER_LIST = {};
  
 var Player = function(id){
     var self = {
-        x:640,
-        y:360,
+		name: "",
+		init: 'init1',
+        x:450,
+        y:450,
         id:id,
         color:'#'+Math.floor(Math.random()*16777215).toString(16),
 		r:24,
-		rs:48,
-		rns:24,
-        pressingRight:false,
-        pressingLeft:false,
-        pressingUp:false,
-        pressingDown:false,
+		hp:100,
+		maxHp:100,
+		mana:100,
+		maxMana:100,
+        Q:false,
+        W:false,
+        E:false,
+		R:false,
+		Lcd: false,
+		Qcd: false,
+		Wcd: false,
+		Ecd: false,
+		Rcd: false,
 		pressingMouseLeft:false,
 		pressingMouseRight:false,
-		mouseX:640,
-		mouseY:360,
-        maxSpd:5,
-		maxHp:100,
-		hp:100,
-		maxMana:120,
-		mana:60,
-		maxCharge:60,
-		charge:0,
-		shootcd: false,
-		shootin: false,
-		sheild: false,
-		bullets: [],
+		mouseX:450,
+		mouseY:450,
+		moveX:0,
+		moveY:0,
+		moved: false,
+		moving: false,
+        maxSpd:4,
+		Spd:4,
+		bullets:[],
     }
-    self.updatePosition = function(){
-		
-        if(self.pressingRight && self.x < 1280-self.r)
-            self.x += self.maxSpd;
-        if(self.pressingLeft && self.x > 0+self.r)
-            self.x -= self.maxSpd;
-        if(self.pressingUp && self.y > 0+self.r)
-            self.y -= self.maxSpd;
-        if(self.pressingDown && self.y < 720-self.r)
-            self.y += self.maxSpd;	
-    }
-	self.shoot = function(){
-		if (self.pressingMouseLeft && !self.shootin) {																							//initiate shooting
-			self.shootin = true;
-		} else if (self.shootin && self.charge < self.maxCharge) {																				//already shooting and not full
-			self.charge++;
+	self.move = function() {
+		//initialize moving
+		if (self.pressingMouseRight && !self.moved) {
+			self.moveX = self.mouseX;
+			self.moveY = self.mouseY;
+			self.moved = true;
+			self.moving = true;
+		} else if (!self.pressingMouseRight) {
+			self.moved = false;
 		}
-		if(!self.pressingMouseLeft && self.shootin) {																							//not shooting and have charge
-			console.log(self.bullets.length);
-			ldir = Math.atan2(self.mouseY-self.y,self.mouseX-self.x);
-			var bullet = Bullet(self.x+(self.r+10)*Math.cos(ldir), self.y+(self.r+10)*Math.sin(ldir), ldir, 10+10*self.charge/60, 50*self.charge/60, self.id);
-			console.log(bullet.dmg);
-			self.bullets.push(bullet);
-			self.shootcd = true;
-			self.shootin = false;
-			self.charge = 0;
+		//move
+		if (self.moving) {
+			d = Math.atan2(self.moveY-self.y, self.moveX-self.x);
+			self.x += self.Spd * Math.cos(d);
+			self.y += self.Spd * Math.sin(d);
+			if (getDistance(self.moveX,self.x,self.moveY,self.y) <= self.Spd) {
+				self.moving = false;
+			}
 		}
 	}
-	self.updateshield = function() {
-		self.shield = self.pressingMouseRight;
-		if (self.mana < self.maxMana) {
-			self.mana += 0.1;
-		}
-		if (self.shield && self.mana >= 1) {
-			self.mana--;
-			self.shield = self.pressingMouseRight;
-		} else {
-			self.shield = false;
+	self.psmove = function() {
+		self.x += 5;
+	}
+	self.shoot = function() {
+		if (!self.Lcd && self.pressingMouseLeft) {
+			ldir = Math.atan2(self.mouseY-self.y,self.mouseX-self.x);
+			var bullet = Bullet(self.id,'energyball',self.x+24*Math.cos(ldir),self.y+24*Math.sin(ldir),0,0,ldir,16,5);
+			self.bullets.push(bullet);
+			self.Lcd = true;
+			console.log(self.bullets.length);
+			return;
+		} else if (self.Lcd && !self.pressingMouseLeft){
+			self.Lcd = false;
+			return;
 		}
 
-		//console.log(self.pressingMouseRight)
-		//self.shield = true;
-		//if (self.shield) {self.r = self.rs;} else {self.r = self.rns;}
-	}
-	self.updateBullets = function() {
-		for (var i in self.bullets) {
-			if (self.bullets[i].x > 1280 || self.bullets[i].x < 0 || self.bullets[i].y > 720 || self.bullets[i].y < 0) {						//bullets out of bound
-				self.bullets.splice(i,1);
-				continue;
-			} else {
-				broken = false;
-				for (j in PLAYER_LIST) {
-					if (self.id == PLAYER_LIST[j].id) {
-						continue;
-					} else if (getDistance(self.bullets[i].x,PLAYER_LIST[j].x,self.bullets[i].y,PLAYER_LIST[j].y) < self.bullets[i].r+PLAYER_LIST[j].r) {	//collision
-						if (!PLAYER_LIST[j].shield) {																										//shield
-							PLAYER_LIST[j].hp -= self.bullets[i].dmg;
-							self.bullets.splice(i,1);
-							if (self.mana < self.maxMana) {
-								self.mana += 3;
-							}
-							if (self.mana > self.maxMana) {
-								self.mana = self.maxMana;
-							}
-							
-							broken = true;
-							break;
-						} else {
-							self.bullets[i].dir += Math.PI;
-							self.bullets[i].id = PLAYER_LIST[j].id;
-						}
-					}
-				}
-				if (!broken) {
-					self.bullets[i].x += self.bullets[i].maxSpd*Math.cos(self.bullets[i].dir);
-					self.bullets[i].y += self.bullets[i].maxSpd*Math.sin(self.bullets[i].dir);
-				}
-			}
+		if (!self.Qcd && self.Q && self.mana >= 40) {
+			ldir = Math.atan2(self.mouseY-self.y,self.mouseX-self.x);
+			var bullet = Bullet(self.id,'fireball',self.x+24*Math.cos(ldir),self.y+24*Math.sin(ldir),self.mouseX,self.mouseY,ldir,8,25);
+			self.bullets.push(bullet);
+			self.Qcd = true;
+			console.log(self.bullets.length);
+			self.mana -= 40;
+			return;
+		} else if (self.Qcd && !self.Q){
+			self.Qcd = false;
+			return;
 		}
 	}
     return self;
 }
 
-var Bullet = function(x, y, d, s, dmg, id){
+var Bullet = function(id,type,x,y,tx,ty,dir,Spd,dmg){
     var self = {
+		id:id,
+		type:type,
         x:x,
         y:y,
-		dir:d,
-		r:5,
-        maxSpd:s,
+		tx:tx,
+		ty,ty,
+		dir:dir,
+		Spd:Spd,
+		exp:0,
 		dmg:dmg,
-		id:id,
     }
-    self.updatePosition = function(){
-		self.x += self.maxSpd * Math.cos(self.dir);
-		self.y += self.maxSpd * Math.sin(self.dir);
-    }
+	self.move = function() {
+		switch(self.type) {
+			case 'fireball':
+				console.log('fireball');
+				self.x += self.Spd * Math.cos(self.dir);
+				self.y += self.Spd * Math.sin(self.dir);
+				break;
+			case 'energyball':
+				console.log('energyball');
+				self.x += self.Spd * Math.cos(self.dir);
+				self.y += self.Spd * Math.sin(self.dir);
+				break;
+		}
+	}
+	self.checkcol = function() {
+		if (self.x < -24 || self.x > 2184 || self.y < -24 || self.y > 2184 ) {PLAYER_LIST[id].bullets.splice(PLAYER_LIST[id].bullets.indexOf(self),1); return;}
+		switch(self.type) {
+			case 'fireball':
+				if (self.exp == 1) {PLAYER_LIST[self.id].bullets.splice(PLAYER_LIST[self.id].bullets.indexOf(self),1);}
+				for (var i in PLAYER_LIST) {
+					if (getDistance(self.tx,self.x,self.ty,self.y) <= self.Spd) {
+						self.x = self.tx;
+						self.y = self.ty;
+						self.exp = 1;
+					}
+					if (self.id !== PLAYER_LIST[i].id && !PLAYER_LIST[i].dead) {
+						if (self.exp == 0) {
+							if (getDistance(PLAYER_LIST[i].x, self.x, PLAYER_LIST[i].y, self.y) < (24 + 8)) {
+								self.exp = 1;
+							}
+						}
+						if (self.exp == 1) {
+							if (getDistance(PLAYER_LIST[i].x, self.x, PLAYER_LIST[i].y, self.y) < (24 + 32)) {
+								PLAYER_LIST[i].hp -= self.dmg;
+								console.log("dmgcheck " + self.id + " " + PLAYER_LIST[i].id + " " + (self.id !== PLAYER_LIST[i].id));
+							}
+						}
+					}
+				}
+				break;
+			case 'energyball':
+				for (var i in PLAYER_LIST) {
+					if (self.id != PLAYER_LIST[i].id && !PLAYER_LIST[i].dead) {
+						if (getDistance(PLAYER_LIST[i].x, self.x, PLAYER_LIST[i].y, self.y) < (24 + 8)) {
+							PLAYER_LIST[i].hp -= self.dmg;
+							PLAYER_LIST[self.id].bullets.splice(PLAYER_LIST[self.id].bullets.indexOf(self),1)
+							continue;
+						}
+					}
+				}
+				break;
+		}
+	}
+	
     return self;
 }
  
@@ -154,21 +181,44 @@ io.sockets.on('connection', function(socket){
     socket.on('disconnect',function(){
         delete SOCKET_LIST[socket.id];
         delete PLAYER_LIST[socket.id];
+		names = [];
+		for (var i in PLAYER_LIST) {
+			if(PLAYER_LIST[i].init == 'init3') {
+				names.push(PLAYER_LIST[i].name);
+				console.log(PLAYER_LIST[i].name);
+			}
+		}
+		io.emit('namelist',names);
     });
-   
+	
+	socket.on('name',function(data){
+		console.log(data.id + " " + data.name);
+		PLAYER_LIST[data.id].name = data.name;
+		PLAYER_LIST[data.id].init = 'init3';
+		
+		names = [];
+		for(var i in PLAYER_LIST) {
+			if(PLAYER_LIST[i].init == 'init3') {
+				names.push(PLAYER_LIST[i].name);
+			}
+		}
+		console.log(names);
+		io.emit('namelist',names);
+    });
+
     socket.on('keyPress',function(data){
-        if(data.inputId === 'left')
-            player.pressingLeft = data.state;
-        else if(data.inputId === 'right')
-            player.pressingRight = data.state;
-        else if(data.inputId === 'up')
-            player.pressingUp = data.state;
-        else if(data.inputId === 'down')
-            player.pressingDown = data.state;
+        if(data.inputId === 'Q')
+            player.Q = data.state;
+        else if(data.inputId === 'W')
+            player.W = data.state;
+        else if(data.inputId === 'E')
+            player.E = data.state;
+        else if(data.inputId === 'R')
+            player.R = data.state;
 		else if(data.inputId === 'mouseleft')
             player.pressingMouseLeft = data.state;
 		else if(data.inputId === 'mouseright')
-            player.pressingMouseRight = data.state;
+            player.pressingMouseRight = data.state;	
     });
 	socket.on('mouseMove',function(data){
 		if(data.inputId === 'mouse') {
@@ -176,43 +226,71 @@ io.sockets.on('connection', function(socket){
 			player.mouseY = data.state[1];
 		}
     });
+	
+	socket.on('onping',function(data){
+		r = data.state;
+		socket.emit('retping',r);
+	});
+	
 });
 
 function getDistance(x1, x2, y1, y2) {
 	return Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
 }
 
-setInterval(function(){	
+setInterval(function(){
+	var init = [];
     var pack = [];
     for(var i in PLAYER_LIST){
         var player = PLAYER_LIST[i];
-		if (PLAYER_LIST[i].hp <= 0) {
-			delete PLAYER_LIST[i];
+		if (player.init == 'init1'){
+			init.push(player.id);
+			player.init = 'init2';
+			continue;
+		} else if (player.init == 'init2') {
 			continue;
 		}
-		player.updateBullets();
-        player.updatePosition();
+		if (player.hp <= 0 || player.dead) {
+			player.dead = true;
+			continue;
+		}
+		
+		if (player.hp < player.maxHp) {
+			player.hp += 1/30;
+		}
+		
+		if (player.mana < player.maxMana) {
+			player.mana += 1/15;
+		}
+		
+		player.move();
+		for (var j in player.bullets) {
+			player.bullets[j].move();
+			player.bullets[j].checkcol();
+		}
 		player.shoot();
-		player.updateshield();
+		
         pack.push({
             x:player.x,
             y:player.y,
             color:player.color,
 			r:player.r,
+			name:player.name,
 			mouseX:player.mouseX,
 			mouseY:player.mouseY,
-			bullets:player.bullets,
-			maxHp:player.maxHp,
 			hp:player.hp,
-			maxMana:player.maxMana,
+			maxHp:player.maxHp,
 			mana:player.mana,
-			maxCharge:player.maxCharge,
-			charge:player.charge,
-			shield:player.shield,
+			maxMana:player.maxMana,
+			bullets:player.bullets,
         });
     }
     for(var i in SOCKET_LIST){
         var socket = SOCKET_LIST[i];
         socket.emit('newPositions',pack);
     }
+	for(var i in init) {
+		socket.emit('initiate',init[i]);
+	}
+
 },1000/60);
